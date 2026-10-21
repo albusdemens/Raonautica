@@ -263,13 +263,19 @@ function notice(r) {
   if (r.event?.startsWith('BLACKOUT')) pending.push('diver blacked out');
   if (r.do?.ok && r.action.do === 'grab') {
     pending.push(`diver grabbed a ${r.do.kind}`);
-    // forget the sighting that was just taken
-    const near = sightings.filter((v) => v.item === r.do.kind).map((v) => ({ v, d: relFrom(S, v).dist })).sort((a, b) => a.d - b.d)[0];
-    if (near && near.d < 10) sightings.splice(sightings.indexOf(near.v), 1);
+    // forget the sighting just taken, and any duplicates of it (the same fish logged twice from different looks)
+    for (const v of sightings.filter((x) => x.item === r.do.kind && relFrom(S, x).dist < 12)) sightings.splice(sightings.indexOf(v), 1);
   }
   if (r.do?.ok && r.action.do === 'exit') pending.push('diver just exited the sub');
   if (r.do?.ok && r.action.do === 'enter') pending.push('diver just entered the sub');
   if (r.action.replan) pending.push('SYSTEM 1 requested a replan');
+  // sonar check: the tracking sonar sees every real target within 15 m. A sighting the diver is right next to,
+  // with no sonar contact at all, cannot be real.
+  if (S.active === 'diver' && !S.lock) {
+    const ghosts = sightings.filter((v) => relFrom(S, v).dist < 8);
+    for (const v of ghosts) sightings.splice(sightings.indexOf(v), 1);
+    if (ghosts.length) pending.push(`sighting(s) ${ghosts.map((v) => v.id).join(', ')} removed: the diver is next to the spot and the tracking sonar shows nothing there (false or duplicate detection)`);
+  }
   blockedStreak = r.blocked_by ? blockedStreak + 1 : 0;
   if (blockedStreak >= 3) { pending.push(`stuck: blocked by ${r.blocked_by} for 3 steps`); blockedStreak = 0; }
   if (S.active === 'diver' && S.air_s < 35 && !airWarned) { pending.push(`diver air low (${S.air_s} s)`); airWarned = true; }
