@@ -11,7 +11,7 @@ export const KIND_TO_ITEM = { bubblefin: 'fish', kelp_peeper: 'fish', lanternfis
 export const CAM_OFFSET = { front: 0, left: -90, right: 90, back: 180, down: 0 };
 const CAM_FOV = { front: 62, left: 62, right: 62, back: 62, down: 70 };
 const REAL_LEN = { bubblefin: 2.1, kelp_peeper: 2.1, lanternfish: 2.1, sea_lettuce: 1.5, salt_crystal: 1.2 };   // metres
-const IMG_W = 640, IMG_H = 360, CROP = 200, ZOOM = 2;
+const IMG_W = 512, IMG_H = 288, CROP = 160, ZOOM = 2;
 
 const KIND_DESC = {
   bubblefin: 'a single large round bright-YELLOW fish with big white eyes and an orange tail (about 2 m long), with a soft yellow glow',
@@ -99,7 +99,7 @@ function runCodex(images, prompt, schemaPath, outPath, cwd) {
 const wrap180 = (a) => ((a + 540) % 360) - 180;
 
 // images: {front, left, right, down}
-export async function look(images, who, outDir, name, where = 'unknown') {
+export async function look(images, who, outDir, name, where = 'unknown', isKnown = () => false) {
   const t0 = Date.now();
   const dSchema = path.join(outDir, 'detect_schema.json'), cSchema = path.join(outDir, 'confirm_schema.json');
   if (!fs.existsSync(dSchema)) fs.writeFileSync(dSchema, JSON.stringify(DETECT_SCHEMA));
@@ -108,9 +108,17 @@ export async function look(images, who, outDir, name, where = 'unknown') {
   const det = await runCodex(order.map((k) => images[k]), DETECT_PROMPT(who, where), dSchema, path.join(outDir, `${name}_detect.json`), outDir);
 
   // stage 2: zoom-confirm every candidate in one call
-  const cands = det.targets.filter((t) => t.confidence >= 0.3).slice(0, 6);
+  const all = det.targets.filter((t) => t.confidence >= 0.3).slice(0, 6);
+  // fast path: very confident detections and re-sightings of known targets skip the zoom-confirm call
   const confirmed = [];
+  const cands = [];
+  for (const t of all) {
+    if (t.confidence >= 0.85 || isKnown(t)) confirmed.push({ ...t, distance_vlm_m: t.distance_m, distance_from: 'vlm', confirm: { skipped: true } });
+    else cands.push(t);
+  }
+  let confirmCalls = 0;
   if (cands.length) {
+    confirmCalls = 1;
     const crops = cands.map((c, i) => {
       const cx = Math.round(Math.min(1, Math.max(0, c.x_frac)) * IMG_W), cy = Math.round(Math.min(1, Math.max(0, c.y_frac)) * IMG_H);
       const x = Math.min(IMG_W - CROP, Math.max(0, cx - CROP / 2)), y = Math.min(IMG_H - CROP, Math.max(0, cy - CROP / 2));
@@ -141,7 +149,7 @@ export async function look(images, who, outDir, name, where = 'unknown') {
   for (const t of confirmed) t.bearing_deg = wrap180(t.bearing_deg + CAM_OFFSET[t.camera]);
   for (const o of det.obstacles) o.bearing_deg = wrap180(o.bearing_deg + CAM_OFFSET[o.camera]);
   const rejected = cands.filter((c) => !confirmed.some((x) => x.x_frac === c.x_frac && x.camera === c.camera)).map((c) => ({ kind: c.kind, camera: c.camera, reason: c.confirm?.reason || 'not confirmed' }));
-  return { ...det, targets: confirmed, rejected, candidates: cands.length, latency_ms: Date.now() - t0 };
+  return { ...det, targets: confirmed, rejected, candidates: all.length, confirm_calls: confirmCalls, latency_ms: Date.now() - t0 };
 }
 
 // compact text for prompts and HUD

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GodotBridge } from './bridge.js';
 import { raon, extractJson } from './raon.js';
-import { look, describe, KIND_TO_ITEM } from './vlm.js';
+import { look, describe, KIND_TO_ITEM, CAM_OFFSET } from './vlm.js';
 import { s1System, s2System, s1Prompt, s2Prompt } from './prompts.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -162,19 +162,29 @@ function checkSubgoal(sg, s) {
 
 // ---------------------------------------------------------------- steps
 
+// is a camera candidate just a re-sighting of something already confirmed? (then skip the zoom-confirm call)
+function knownCandidate(t, at) {
+  const p = at.pose, d = Math.max(0.5, t.distance_m);
+  const c = rad(p.heading + t.bearing_deg + (CAM_OFFSET[t.camera] || 0));
+  const horiz = t.camera === 'down' ? Math.max(1, d * 0.5) : d;
+  const E = p.E + Math.sin(c) * horiz, N = p.N + Math.cos(c) * horiz;
+  return sightings.some((x) => x.kind === t.kind && Math.hypot(x.E - E, x.N - N) < 12);
+}
+
+let lookInFlight = null;     // a background look (periodic looks don't block Raon)
 async function doLook(reason) {
   const name = `s${String(S.step).padStart(3, '0')}_${S.active}`;
   await g.call('hud', { phase: `CODEX looking (${reason})…` });
   const r = await g.call('look', { dir: path.join(dir, 'vlm'), name });
-  S = r.state;
+  const at = r.state;          // pose when the frames were taken: estimates use this even if the result arrives late
   try {
-    const v = await look(r.paths, S.active, path.join(dir, 'vlm'), name, whereAmI(S));
+    const v = await look(r.paths, at.active, path.join(dir, 'vlm'), name, whereAmI(at), (t) => knownCandidate(t, at));
     stats.looks++; stats.lookms += v.latency_ms;
-    lastLook = v; lastLookStep = S.step;
-    const { fresh, removed } = remember(v, S);
+    lastLook = v; lastLookStep = at.step;
+    const { fresh, removed } = remember(v, at);
     if (removed.length) pending.push(`sighting(s) ${removed.join(', ')} not confirmed up close - removed (probably a false detection)`);
-    log({ type: 'look', step: S.step, reason, pose: S.pose, active: S.active, images: r.paths, vlm: v, new_sightings: fresh, removed_sightings: removed });
-    say(`look @${S.step} (${(v.latency_ms / 1000).toFixed(0)}s): ${v.targets.map((t) => `${t.kind}@${Math.round(t.bearing_deg)}°/${Math.round(t.distance_m)}m`).join(', ') || 'no targets'}`);
+    log({ type: 'look', step: at.step, reason, pose: at.pose, active: at.active, images: r.paths, vlm: v, new_sightings: fresh, removed_sightings: removed });
+    say(`look @${at.step} (${(v.latency_ms / 1000).toFixed(0)}s, ${v.confirm_calls ? 'confirmed' : 'single call'}): ${v.targets.map((t) => `${t.kind}@${Math.round(t.bearing_deg)}°/${Math.round(t.distance_m)}m`).join(', ') || 'no targets'}`);
     await g.call('hud', { vlm: describe(v).replace(/\n/g, '\n'), sightings: sightings.map((x) => ({ E: x.E, N: x.N })) });
     return fresh;
   } catch (e) {
@@ -285,15 +295,22 @@ let outcome = 'out of steps', consecutiveErrors = 0;
 while (S.step < MAX_STEPS) {
   try {
     if (pending.length) {
+      // planning needs a fresh view: wait for a running look, or take one if the last is stale
+      let fresh = [];
+      if (lookInFlight) fresh = await lookInFlight;
+      else if (S.step - lastLookStep >= 2) fresh = await doLook('plan');
       const trigger = [...new Set(pending)].join('; ');
       pending = [];
-      const fresh = await doLook('plan');
       await g.call('hud', { phase: 'SYSTEM 2 (Raon) planning…' });
       await system2(fresh.length ? `${trigger}; new sightings: ${fresh.join(', ')}` : trigger);
       await shot('plan');
-    } else if (S.step - lastLookStep >= closeRangeEvery()) {
-      const fresh = await doLook('periodic');
-      if (fresh.length && S.step - lastS2Step >= 2) pending.push(`new sightings: ${fresh.join(', ')}`);
+    } else if (!lookInFlight && S.step - lastLookStep >= closeRangeEvery()) {
+      // background look: Raon keeps acting while Codex looks; results merge in when ready
+      const atStep = S.step;
+      lookInFlight = doLook('periodic').then((fresh) => {
+        if (fresh.length && atStep - lastS2Step >= 2) pending.push(`new sightings: ${fresh.join(', ')}`);
+        return fresh;
+      }).finally(() => { lookInFlight = null; });
     }
     await g.call('hud', { phase: 'SYSTEM 1 (Raon) deciding…' });
     const action = await system1();
