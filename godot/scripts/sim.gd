@@ -107,7 +107,24 @@ func begin(a: Dictionary) -> void:
 	var b := body()
 	_act = {"a": a, "who": active, "start": b.pos, "turn_left": float(a.turn_deg), "move_left": float(a.duration_s),
 		"blocked": 0.0, "res": {"body": active, "planned_m": snappedf(spec().speed * a.throttle * a.duration_s, 0.1), "moved_m": 0.0, "blocked_by": "", "do": {}}}
+	# homing: a grab ordered while a target is locked hands steering to the diver's autopilot
+	if active == "diver" and str(a.get("do", "none")) == "grab":
+		var lk := _nearest_item()
+		if not lk.is_empty() and lk.d <= LOCK_R:
+			_act["home_on"] = lk.it
+			_act.turn_left = 0.0
 	moving = true
+
+func _nearest_item() -> Dictionary:
+	var best := {}
+	var bd := INF
+	for it in world.items:
+		if it.state != "world": continue
+		var d := dist3(diver.pos, world.item_pos(it, world_t))
+		if d < bd:
+			bd = d
+			best = it
+	return {} if best.is_empty() else {"it": best, "d": bd}
 
 func is_busy() -> bool: return not _act.is_empty()
 
@@ -127,9 +144,20 @@ func tick_action(dt: float) -> Dictionary:
 		_tick(dt)
 		return {}
 	if _act.move_left > 1e-6:
+		var vert: float = a.vertical
+		var thr: float = a.throttle
+		if _act.has("home_on") and _act.home_on.state == "world":
+			# autopilot: turn toward the target (at the turn rate), match its depth, slow down when close
+			var q: Vector3 = world.item_pos(_act.home_on, world_t)
+			var want_h := bearing(b.pos, q)
+			var dh := norm180(want_h - b.heading)
+			b.heading = fposmod(b.heading + signf(dh) * minf(absf(dh), sp.turn * dt), 360.0)
+			vert = clampf((q.y - b.pos.y) / maxf(0.5, sp.vspeed * 0.6), -1.0, 1.0)
+			var hd := Vector2(q.x - b.pos.x, q.z - b.pos.z).length()
+			thr = clampf(maxf(thr, 0.8) * (1.0 if absf(dh) < 45.0 else 0.3), 0.0, 1.0) * clampf(hd / 2.0, 0.25, 1.0)
 		var f := fwd(b.heading)
-		var stepm: float = sp.speed * a.throttle * dt
-		var want := Vector3(b.pos.x + f.x * stepm, b.pos.y + sp.vspeed * a.vertical * dt, b.pos.z + f.y * stepm)
+		var stepm: float = sp.speed * thr * dt
+		var want := Vector3(b.pos.x + f.x * stepm, b.pos.y + sp.vspeed * vert * dt, b.pos.z + f.y * stepm)
 		var hit := ""
 		if world.floor_at(want.x, want.z) + sp.r > b.pos.y + 0.4 and stepm > 0.0:
 			want.x = b.pos.x; want.z = b.pos.z; hit = "seabed / rock wall ahead"

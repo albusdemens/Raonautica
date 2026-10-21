@@ -41,7 +41,7 @@ COMMAND - reply with ONLY this JSON:
 Execution: 1) turn in place by turn_deg (-180..180, + = right); 2) for duration_s move forward at throttle (0..1) x max speed while moving vertically at vertical (-1..1) x max vertical speed (+1 = UP/shallower, -1 = DOWN/deeper); 3) perform "do": none | exit | enter | grab.
 - forward distance = throttle x speed x duration. Do not overshoot: stop ~1 m short of a target.
 - To face something at relative bearing b, turn_deg = b. Prefer the LATEST CAMERA bearing when the look is fresh; otherwise use the sighting's estimated bearing.
-- When there is a TARGET LOCK, follow it (it is exact, unlike sightings) and ALWAYS set do:"grab" on the approach move: the grab fires on contact.
+- When there is a TARGET LOCK and you want that target: do:"grab", throttle 1, duration ~ distance/2 + 1 s. The autopilot homes in (heading + depth) and grabs on contact. Only skip it if air is too low or the target is not needed.
 - When the REACH SENSOR says something is within reach, use do:"grab".
 - If the target is almost straight above/below (horizontal < 3 m), use throttle 0 and only vertical.
 - exit: only from the sub. enter: diver within 5 m of the sub (beacon distance).
@@ -93,7 +93,7 @@ export function s1Prompt(s, plan, target, lookText, lastResult, lock = null) {
         : 'BODY SWITCH NEEDED: SYSTEM 2 wants the SUB. Swim back (follow the SUB BEACON) and use do:"enter" within 5 m.');
     }
   }
-  if (lock) lines.push(`TARGET LOCK (tracking sonar, EXACT, updated every step): ${lock.kind} (${lock.sighting}) ${lock.dist} m (horiz ${lock.horiz}), rel ${sgn(lock.rel)}°, dy ${sgn(lock.dy)} -> turn_deg ${sgn(lock.rel)}, swim about ${Math.max(0, lock.dist - 1).toFixed(1)} m with vertical toward dy, and set do:"grab" (it fires the moment you are within 3 m).`);
+  if (lock) lines.push(`TARGET LOCK (tracking sonar, EXACT, updated every step): ${lock.kind} (${lock.sighting}) ${lock.dist} m (horiz ${lock.horiz}), rel ${sgn(lock.rel)}°, dy ${sgn(lock.dy)}. HOMING AVAILABLE: send do:"grab" with throttle 1 and duration_s ~${Math.min(4, Math.ceil(lock.dist / 2) + 1)} - the diver's autopilot steers heading AND depth toward the locked target for you and grabs on contact (turn_deg/vertical are ignored while homing).`);
   lines.push(`ACTIONS AVAILABLE NOW: ${s.active === 'sub' ? 'exit | none' : `${s.reach.length ? 'grab' : 'grab (nothing in reach yet)'} | ${s.sub_beacon.dist <= 5 ? 'enter' : 'enter (sub too far)'}`}`);
   lines.push(`LAST STEP: ${fmtResult(lastResult)}`);
   lines.push(`LATEST CAMERA LOOK: ${lookText}`);
