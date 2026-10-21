@@ -224,7 +224,8 @@ async function system2(trigger) {
     for (const k of ['E', 'N', 'depth']) sg[k] = sg[k] == null ? null : Number(sg[k]);
     const same = plan && JSON.stringify(plan.subgoal) === JSON.stringify(sg);
     plan = { flagged: same && plan.flagged, assessment: parsed.assessment || '', plan: parsed.plan || '', subgoal: sg,
-      body: parsed.body === 'diver' ? 'diver' : 'sub', guidance: String(parsed.guidance || ''), trigger, step: S.step };
+      // sightings/sub returns are always the diver's job (only the diver can grab)
+      body: parsed.body === 'diver' || sg.type === 'sighting' || sg.type === 'sub' ? 'diver' : 'sub', guidance: String(parsed.guidance || ''), trigger, step: S.step };
   }
   lastS2Step = S.step;
   log({ type: 's2', step: S.step, trigger, prompt: user, content: res.content, reasoning: res.reasoning, latency_ms: res.latency_ms, usage: res.usage, parsed, rejected, plan });
@@ -234,12 +235,12 @@ async function system2(trigger) {
 
 async function system1() {
   const lock = S.active === 'diver' ? visionLock(S) : null;
-  const target = plan ? targetOf(plan.subgoal, S) : null;
+  const target = plan ? targetOf(plan.subgoal, S) : null;   // also used by the approach limiter below
   const user = s1Prompt(S, plan, target, lookText(), lastResult, lock);
   const messages = [{ role: 'system', content: SYS1 }, { role: 'user', content: user }];
   let res, p = null;
-  for (let attempt = 0; attempt < 2 && !p; attempt++) {
-    res = await raon(messages, { max_tokens: 1500 });
+  for (let attempt = 0; attempt < 3 && !p; attempt++) {
+    res = await raon(messages, { max_tokens: 3000 });
     p = extractJson(res.content);
     if (!p) stats.parseFail++;
   }
@@ -255,6 +256,13 @@ async function system1() {
     do: ['exit', 'enter', 'grab'].includes(p.do) ? p.do : 'none',
     replan: !!p.replan,
   };
+  // approach limiter (low-level safety): don't drive past the target. Facing it (|turn - rel| < 60), cap the
+  // forward distance at its horizontal distance + 2 m by shortening the move.
+  if (target && action.throttle > 0 && Math.abs(norm180(action.turn_deg - target.rel.rel)) < 60) {
+    const speed = spec[S.active].speed, fwd = speed * action.throttle * action.duration_s;
+    const cap = Math.max(2, target.rel.horiz + 2);
+    if (fwd > cap) { action.duration_s = +Math.max(0.5, cap / (speed * action.throttle)).toFixed(1); action.limited = true; }
+  }
   log({ type: 's1', step: S.step, prompt: user, content: res.content, reasoning: res.reasoning, latency_ms: res.latency_ms, usage: res.usage, action });
   return action;
 }
