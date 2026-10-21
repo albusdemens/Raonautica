@@ -86,7 +86,7 @@ function runCodex(images, prompt, schemaPath, outPath, cwd) {
     const p = spawn('codex', args, { cwd, stdio: ['pipe', 'ignore', 'pipe'] });
     let err = '';
     p.stderr.on('data', (d) => { err += d; });
-    const timer = setTimeout(() => { p.kill('SIGKILL'); fail(new Error('codex timeout')); }, 180_000);
+    const timer = setTimeout(() => { p.kill('SIGKILL'); fail(new Error('codex timeout')); }, 75_000);   // looks normally take 10-25 s
     p.on('close', (code) => {
       clearTimeout(timer);
       if (code !== 0 || !fs.existsSync(outPath)) return fail(new Error(`codex exited ${code}: ${err.slice(-300)}`));
