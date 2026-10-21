@@ -48,11 +48,12 @@ const first = await g.call('state');
 let S = first.state;
 const zones = first.zones;
 const spec = { sub: { speed: 12, vspeed: 5, r: 2.3, max_dur: 6 }, diver: { speed: 2, vspeed: 1.5, r: 0.5, max_dur: 4 } };
-const lessons = (() => {
+// lessons are re-read on every call, so supervisor feedback applies mid-run without a restart
+function lessons() {
   const t = fs.existsSync(LESSONS_FILE) ? fs.readFileSync(LESSONS_FILE, 'utf8').replace(/<!--[\s\S]*?-->/g, '').replace(/^#.*$/m, '').trim() : '';
   return t ? `\n\nLESSONS FROM PREVIOUS RUNS (written by a supervisor who reviewed screenshots - follow them):\n${t}` : '';
-})();
-const SYS1 = s1System(spec) + lessons, SYS2 = s2System(spec) + lessons;
+}
+const SYS1 = () => s1System(spec) + lessons(), SYS2 = () => s2System(spec) + lessons();
 
 let plan = null, history = [], lastResult = null, lastS2Step = -99, pending = ['mission start'];
 let lastLook = null, lastLookStep = -99, blockedStreak = 0, airWarned = false, shotN = 0;
@@ -153,6 +154,12 @@ function checkSubgoal(sg, s) {
   if (sg.type === 'sighting') return sightings.some((x) => x.id === sg.id) ? null : `no sighting "${sg.id}" - only ids listed under SIGHTINGS exist. To find targets, move the sub to the zone where they live and look.`;
   if (sg.type === 'zone') {
     if (!zones.some((z) => z.id === sg.id)) return `no zone "${sg.id}" (valid: ${zones.map((z) => z.id).join(', ')}).`;
+    const t = targetOf(sg, s);
+    if (t?.reached && !sightings.length) {
+      return sg.id === 'Z2'
+        ? 'you are already above the Kelp Forest and the cameras see nothing: the canopy hides everything below ~7 m. Send the DIVER down to search: subgoal {"type":"waypoint","E":-320,"N":170,"depth":20} with body "diver" (it exits, descends among the stalks and looks around).'
+        : `you are already at ${sg.id} and the cameras see nothing from here. Move the SUB ~25 m to another part of the zone (waypoint) so the cameras see new ground.`;
+    }
     return null;
   }
   if (sg.type === 'sub') return s.active === 'diver' ? null : 'the diver is already inside the sub.';
@@ -206,7 +213,7 @@ const lookText = () => (lastLook ? describe(lastLook, S.step - lastLookStep) : '
 
 async function system2(trigger) {
   const user = s2Prompt(S, zones, sightingsView(S), plan, trigger, history, lookText());
-  const messages = [{ role: 'system', content: SYS2 }, { role: 'user', content: user }];
+  const messages = [{ role: 'system', content: SYS2() }, { role: 'user', content: user }];
   let res, parsed = null; const rejected = [];
   for (let attempt = 0; attempt < 3; attempt++) {
     res = await raon(messages, { max_tokens: 2500 });
@@ -237,7 +244,7 @@ async function system1() {
   const lock = S.active === 'diver' ? visionLock(S) : null;
   const target = plan ? targetOf(plan.subgoal, S) : null;   // also used by the approach limiter below
   const user = s1Prompt(S, plan, target, lookText(), lastResult, lock);
-  const messages = [{ role: 'system', content: SYS1 }, { role: 'user', content: user }];
+  const messages = [{ role: 'system', content: SYS1() }, { role: 'user', content: user }];
   let res, p = null;
   for (let attempt = 0; attempt < 3 && !p; attempt++) {
     res = await raon(messages, { max_tokens: 3000 });
@@ -303,7 +310,7 @@ async function shot(label) {
 
 // ---------------------------------------------------------------- main loop
 
-log({ type: 'start', run: RUN, maxSteps: MAX_STEPS, vlmEvery: VLM_EVERY, lessons });
+log({ type: 'start', run: RUN, maxSteps: MAX_STEPS, vlmEvery: VLM_EVERY, lessons: lessons() });
 await shot('start');
 let outcome = 'out of steps', consecutiveErrors = 0;
 while (S.step < MAX_STEPS) {

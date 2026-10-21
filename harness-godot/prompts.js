@@ -88,7 +88,7 @@ export function s1Prompt(s, plan, target, lookText, lastResult, lock = null) {
     lines.push(`GUIDANCE: "${plan.guidance}"`);
     if (plan.body !== s.active) {
       lines.push(plan.body === 'diver'
-        ? 'BODY SWITCH NEEDED: SYSTEM 2 wants the DIVER. Once the sub is within ~8 m of the target, stop and use do:"exit".'
+        ? 'BODY SWITCH NEEDED: SYSTEM 2 wants the DIVER. Once the sub is within ~8 m of the target - or as close as the sub can get (e.g. directly above it on the kelp canopy) - stop and use do:"exit".'
         : 'BODY SWITCH NEEDED: SYSTEM 2 wants the SUB. Swim back (follow the SUB BEACON) and use do:"enter" within 8 m.');
     }
   }
