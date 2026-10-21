@@ -1,0 +1,11 @@
+# secrets
+.env
+
+# dependencies / engine caches
+node_modules/
+godot/.godot/
+
+# run outputs (screenshots, frames, logs) - keep only the written reviews
+runs/**
+!runs/**/
+!runs/**/review.md

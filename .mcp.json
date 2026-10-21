@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "godot": {
+      "command": "node",
+      "args": ["/home/albus/.local/share/godot-mcp/node_modules/@coding-solo/godot-mcp/build/index.js"],
+      "env": {
+        "GODOT_PATH": "/usr/local/bin/godot"
+      }
+    }
+  }
+}

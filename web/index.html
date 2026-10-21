@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raon Dive</title>
+  <link rel="icon" href="data:,">
+  <script type="importmap">
+    { "imports": { "three": "/three/build/three.module.js", "three/addons/": "/three/examples/jsm/" } }
+  </script>
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #03142a; font: 12px/1.35 system-ui, sans-serif; color: #e8fbff; }
+    #app canvas { display: block; }
+    #vignette { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,20,40,0.55) 100%); }
+    .panel { position: fixed; background: rgba(4, 28, 48, 0.62); border: 1px solid rgba(120, 230, 255, 0.25); border-radius: 8px; padding: 8px 10px; backdrop-filter: blur(3px); }
+    #status { top: 10px; left: 10px; width: 330px; }
+    #status .title { font-weight: 700; letter-spacing: 0.08em; color: #7ff0ff; margin-bottom: 3px; }
+    .bar { display: inline-block; width: 140px; height: 7px; background: rgba(255,255,255,0.15); border-radius: 4px; vertical-align: middle; overflow: hidden; }
+    .bar span { display: block; height: 100%; }
+    .lunch { margin-top: 3px; }
+    #maps { position: fixed; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; }
+    #maps canvas { border-radius: 6px; border: 1px solid rgba(120, 230, 255, 0.3); }
+    #s2 { left: 10px; bottom: 10px; width: 46%; }
+    #s1 { right: 10px; bottom: 10px; width: 44%; }
+    .hdr { font-weight: 700; color: #ffcf6b; margin-bottom: 2px; }
+    #s1 .hdr { color: #7ff0ff; }
+    .dim { opacity: 0.7; }
+    .warn { color: #ff8f8f; }
+    .mono { font-family: ui-monospace, monospace; font-size: 11px; }
+    #labels { position: fixed; inset: 0; pointer-events: none; }
+    .label { position: absolute; left: 0; top: 0; padding: 1px 5px; border-radius: 4px; font-size: 11px; white-space: nowrap; background: rgba(0,0,0,0.45); border: 1px solid; }
+    .label.fish { border-color: #ffcf3b; color: #ffe9a3; }
+    .label.salad { border-color: #8ee05a; color: #d4ffb5; }
+    .label.mineral { border-color: #c9a8ff; color: #eadcff; }
+    .label.sub { border-color: #ff9a3c; color: #ffd2a8; }
+    #controls { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; align-items: center; }
+    #controls button, #controls select { font: inherit; background: #0d4a66; color: #e8fbff; border: 1px solid #5fd0ee; border-radius: 6px; padding: 4px 10px; }
+    #loading { position: fixed; inset: 0; display: grid; place-items: center; font-size: 18px; letter-spacing: 0.2em; color: #7ff0ff; background: #03142a; z-index: 10; }
+    body.overview #labels, body.overview #vignette { display: none; }
+  </style>
+</head>
+<body>
+  <div id="loading">building the ocean…</div>
+  <div id="app"></div>
+  <div id="vignette"></div>
+  <div id="labels"></div>
+  <div id="status" class="panel"></div>
+  <div id="maps"><canvas id="minimap" width="210" height="210"></canvas><canvas id="profile" width="210" height="110"></canvas></div>
+  <div id="s2" class="panel"></div>
+  <div id="s1" class="panel"></div>
+  <div id="controls" class="panel">
+    <span id="run" class="dim"></span>
+    <label>view <select id="view"><option value="chase">chase</option><option value="free">free orbit</option><option value="overview">overview</option></select></label>
+    <label>speed <input id="speed" type="range" min="0.5" max="8" step="0.5"></label>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
