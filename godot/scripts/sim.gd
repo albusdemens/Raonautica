@@ -9,7 +9,8 @@ const BODIES := {
 	"diver": {"r": 0.5, "speed": 2.0, "vspeed": 1.5, "turn": 120.0, "min_depth": 0.3, "max_dur": 4.0, "sonar": 20.0},
 }
 const O2_MAX := 90.0
-const GRAB_R := 2.5
+const GRAB_R := 3.0      # hand net
+const LOCK_R := 8.0      # short-range tracking sonar
 const ENTER_R := 5.0
 const CARRY_MAX := 3
 const NEEDS := {"fish": 3, "salad": 1, "mineral": 1}
@@ -143,13 +144,19 @@ func tick_action(dt: float) -> Dictionary:
 			_act.res.blocked_by = hit
 		b.pos = want
 		_act.move_left -= dt
+		# grab-on-contact: with do=grab the diver grabs the moment something comes within reach
+		if a.get("do", "none") == "grab" and active == "diver" and not _act.has("grabbed") and not reach_sensor().is_empty():
+			_act["grabbed"] = perform("grab")
+			_act.move_left = 0.0
 		_tick(dt)
 		return {}
 	# finished
 	var res: Dictionary = _act.res
 	res.moved_m = snappedf(dist3(_act.start, b.pos), 0.1)
 	if _act.blocked < 0.25 * float(a.duration_s): res.blocked_by = ""
-	if active == _act.who and a.get("do", "none") != "none":
+	if _act.has("grabbed"):
+		res["do"] = _act.grabbed
+	elif active == _act.who and a.get("do", "none") != "none":
 		res["do"] = perform(a.do)
 	if last_event != "":
 		res["event"] = last_event
@@ -288,4 +295,18 @@ func state() -> Dictionary:
 	}
 	if active == "diver":
 		s["sub_beacon"] = rel_info(diver, sub.pos)
+		var best := {}
+		var bd := INF
+		var bp := Vector3.ZERO
+		for it in world.items:
+			if it.state != "world": continue
+			var q: Vector3 = world.item_pos(it, world_t)
+			var d := dist3(diver.pos, q)
+			if d < bd:
+				bd = d
+				best = it
+				bp = q
+		if bd <= LOCK_R:
+			# the harness only shows this to Raon if vision already confirmed a target of this kind here
+			s["lock"] = {"kind": best.kind, "E": snappedf(bp.x, 0.1), "N": snappedf(bp.z, 0.1), "depth": snappedf(-bp.y, 0.1)}.merged(rel_info(diver, bp))
 	return s

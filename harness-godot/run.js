@@ -118,13 +118,23 @@ function sightingsView(s) {
   return sightings.map((v) => ({ ...v, dist: relFrom(s, v).dist })).sort((a, b) => a.dist - b.dist);
 }
 
+// tracking-sonar lock, accepted only when it agrees with a vision-confirmed sighting of the same kind
+function visionLock(s) {
+  const L = s.lock;
+  if (!L) return null;
+  const v = sightings.find((x) => x.item === L.kind && Math.hypot(x.E - L.E, x.N - L.N) < 15);
+  if (!v) return null;
+  v.E = L.E; v.N = L.N; v.depth = L.depth; v.locked = true;      // the lock refines the sighting
+  return { ...L, sighting: v.id };
+}
+
 function targetOf(sg, s) {
   if (!sg) return null;
   let q = null, reach = 4, label = '', estimated = false;
   if (sg.type === 'sighting') {
     const v = sightings.find((x) => x.id === sg.id);
     if (!v) return null;
-    q = v; reach = s.active === 'sub' ? 10 : 2.5; label = `${v.id} ${v.kind}`; estimated = true;
+    q = v; reach = s.active === 'sub' ? 10 : 3; label = `${v.id} ${v.kind}`; estimated = !v.locked;
   } else if (sg.type === 'zone') {
     const z = zones.find((x) => x.id === sg.id);
     if (!z) return null;
@@ -177,6 +187,7 @@ async function doLook(reason) {
 // close-range visual servoing: when the diver is near its target sighting, look every step
 function closeRangeEvery() {
   if (S.active !== 'diver' || plan?.subgoal?.type !== 'sighting') return VLM_EVERY;
+  if (visionLock(S)) return VLM_EVERY;        // the tracking sonar is exact: no need to re-look every step
   const t = targetOf(plan.subgoal, S);
   return t && t.rel.dist < 8 ? 1 : VLM_EVERY;
 }
@@ -212,8 +223,9 @@ async function system2(trigger) {
 }
 
 async function system1() {
+  const lock = S.active === 'diver' ? visionLock(S) : null;
   const target = plan ? targetOf(plan.subgoal, S) : null;
-  const user = s1Prompt(S, plan, target, lookText(), lastResult);
+  const user = s1Prompt(S, plan, target, lookText(), lastResult, lock);
   const messages = [{ role: 'system', content: SYS1 }, { role: 'user', content: user }];
   let res, p = null;
   for (let attempt = 0; attempt < 2 && !p; attempt++) {
