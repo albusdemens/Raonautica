@@ -152,16 +152,21 @@ function targetOf(sg, s) {
 function checkSubgoal(sg, s) {
   if (!sg || typeof sg !== 'object') return 'missing "subgoal" object.';
   if (sg.type === 'sighting') return sightings.some((x) => x.id === sg.id) ? null : `no sighting "${sg.id}" - only ids listed under SIGHTINGS exist. To find targets, move the sub to the zone where they live and look.`;
-  if (sg.type === 'zone') {
-    if (!zones.some((z) => z.id === sg.id)) return `no zone "${sg.id}" (valid: ${zones.map((z) => z.id).join(', ')}).`;
+  if (sg.type === 'zone' && !zones.some((z) => z.id === sg.id)) return `no zone "${sg.id}" (valid: ${zones.map((z) => z.id).join(', ')}).`;
+  if (sg.type === 'zone' || sg.type === 'waypoint') {
+    // "go where you already are" with nothing sighted nearby = stuck: offer concrete new spots to search
     const t = targetOf(sg, s);
-    if (t?.reached && !sightings.length) {
-      return sg.id === 'Z2'
-        ? 'you are already above the Kelp Forest and the cameras see nothing: the canopy hides everything below ~7 m. Send the DIVER down to search: subgoal {"type":"waypoint","E":-320,"N":170,"depth":20} with body "diver" (it exits, descends among the stalks and looks around).'
-        : `you are already at ${sg.id} and the cameras see nothing from here. Move the SUB ~25 m to another part of the zone (waypoint) so the cameras see new ground.`;
+    const nearbySightings = sightings.filter((v) => relFrom(s, v).horiz < 40);
+    if (t?.reached && !nearbySightings.length) {
+      const p = s.pose, d = Math.round(Math.min(Math.max(p.depth, 6), 25));
+      const ring = [[0, 18, 'north'], [18, 0, 'east'], [0, -18, 'south'], [-18, 0, 'west']]
+        .map(([dE, dN, n]) => `${n}: {"type":"waypoint","E":${Math.round(p.E + dE)},"N":${Math.round(p.N + dN)},"depth":${d}}`).join(' | ');
+      const kelp = Math.hypot(p.E + 320, p.N - 170) < 110;
+      return `you are already there and nothing is sighted within 40 m. Search NEW ground: pick one of these spots 18 m away (${ring})` +
+        (kelp ? ' with body "diver" (under the kelp only the diver can see; keep it down, the sub follows).' : ' with the SUB.');
     }
-    return null;
   }
+  if (sg.type === 'zone') return null;
   if (sg.type === 'sub') return s.active === 'diver' ? null : 'the diver is already inside the sub.';
   if (sg.type === 'waypoint') return Number.isFinite(+sg.E) && Number.isFinite(+sg.N) ? null : 'waypoint needs numeric E and N.';
   return `unknown subgoal type "${sg.type}".`;
