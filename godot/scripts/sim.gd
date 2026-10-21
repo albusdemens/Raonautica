@@ -201,6 +201,7 @@ func _tick(dt: float) -> void:
 	if active == "sub":
 		diver.pos = sub.pos
 		return
+	_sub_follow(dt)
 	if -diver.pos.y < 0.8:
 		o2 = O2_MAX
 		return
@@ -213,6 +214,23 @@ func _tick(dt: float) -> void:
 		carry.clear()
 		o2 = O2_MAX
 		active = "sub"
+
+# support-boat autopilot: while the diver is out, the sub shadows it (within ~6 m, a few metres above)
+const FOLLOW_R := 6.0
+const FOLLOW_SPEED := 3.0
+func _sub_follow(dt: float) -> void:
+	var goal: Vector3 = diver.pos + Vector3(0, 4.0, 0)
+	goal.y = minf(goal.y, -BODIES.sub.min_depth)
+	var d: Vector3 = goal - sub.pos
+	var hd := Vector2(d.x, d.z).length()
+	if hd <= FOLLOW_R and absf(d.y) < 2.0:
+		return
+	var step := minf(FOLLOW_SPEED * dt, maxf(0.0, d.length() - FOLLOW_R * 0.6))
+	var want: Vector3 = sub.pos + d.normalized() * step
+	want.y = minf(-BODIES.sub.min_depth, maxf(want.y, world.floor_at(want.x, want.z) + BODIES.sub.r))
+	sub.pos = collide(want, BODIES.sub.r)[0]
+	if hd > 0.5:
+		sub.heading = fposmod(rad_to_deg(atan2(d.x, d.z)), 360.0)
 
 func _item(id: String) -> Dictionary:
 	for it in world.items:
