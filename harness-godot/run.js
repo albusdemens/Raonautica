@@ -287,7 +287,7 @@ function notice(r) {
   // sonar check: the tracking sonar sees every real target within 15 m. A sighting the diver is right next to,
   // with no sonar contact at all, cannot be real.
   if (S.active === 'diver' && !S.lock) {
-    const ghosts = sightings.filter((v) => relFrom(S, v).dist < 8);
+    const ghosts = sightings.filter((v) => relFrom(S, v).horiz < 8);   // horizontal: vision depth estimates are unreliable
     for (const v of ghosts) sightings.splice(sightings.indexOf(v), 1);
     if (ghosts.length) pending.push(`sighting(s) ${ghosts.map((v) => v.id).join(', ')} removed: the diver is next to the spot and the tracking sonar shows nothing there (false or duplicate detection)`);
   }

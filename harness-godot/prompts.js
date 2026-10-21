@@ -11,7 +11,7 @@ const RULES = (spec) => `WORLD
 PERCEPTION (important)
 - You do NOT get a list of items. What you know about the surroundings comes from CAMERA LOOKS: a vision model describes the active body's front and down cameras every few steps. It can be wrong or imprecise (distances are rough, small things far away are missed, in the deep it is dark).
 - SIGHTINGS are remembered: each target the cameras saw gets an id (V1, V2...) and an ESTIMATED position computed from the camera bearing/distance. Expect a few metres of error; get close and look again.
-- Body sensors are exact: your position, depth, heading, air, inventory, sonar distances, the sub beacon, the diver's REACH SENSOR (something grabbable within 3 m), and the TARGET LOCK: once the cameras have confirmed a target and the diver is within 15 m of it, a tracking sonar gives its EXACT relative position every step.`;
+- Body sensors are exact: your position, depth, heading, air, inventory, sonar distances, the sub beacon, the diver's REACH SENSOR (something grabbable within 3 m), and the TARGET LOCK: once the cameras have confirmed a target and the diver is within 15 m of it horizontally (any depth, down to the seabed), a tracking sonar gives its EXACT relative position and depth every step.`;
 
 export function s2System(spec) {
   return `You are SYSTEM 2: the slow, deliberate planner of an underwater mission. You command a small submarine and a diver who can leave it. A fast controller (SYSTEM 1) executes your subgoals one motor command at a time.

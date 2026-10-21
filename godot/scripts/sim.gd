@@ -10,7 +10,7 @@ const BODIES := {
 }
 const O2_MAX := 90.0
 const GRAB_R := 3.0      # hand net
-const LOCK_R := 15.0     # short-range tracking sonar (camera estimates are often ~10 m off)
+const LOCK_R := 15.0     # tracking sonar: 15 m horizontal radius, any depth down to the seabed
 const ENTER_R := 8.0      # docking range (the following sub hovers ~7 m away)
 const NEEDS := {"fish": 3, "salad": 1, "mineral": 1}
 const DT := 0.05
@@ -119,7 +119,8 @@ func _nearest_item() -> Dictionary:
 	var bd := INF
 	for it in world.items:
 		if it.state != "world": continue
-		var d := dist3(diver.pos, world.item_pos(it, world_t))
+		var q: Vector3 = world.item_pos(it, world_t)
+		var d := Vector2(q.x - diver.pos.x, q.z - diver.pos.z).length()   # horizontal: the sonar sees down to the seabed
 		if d < bd:
 			bd = d
 			best = it
@@ -340,7 +341,7 @@ func state() -> Dictionary:
 		for it in world.items:
 			if it.state != "world": continue
 			var q: Vector3 = world.item_pos(it, world_t)
-			var d := dist3(diver.pos, q)
+			var d := Vector2(q.x - diver.pos.x, q.z - diver.pos.z).length()   # horizontal: down to the seabed
 			if d < bd:
 				bd = d
 				best = it
