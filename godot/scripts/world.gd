@@ -127,15 +127,15 @@ static func half_disc() -> ArrayMesh:
 func _defs() -> void:
 	zones = [
 		{"id": "Z1", "name": "Safe Shallows", "E": -330, "N": -320, "parkDepth": 8, "r": 90,
-			"desc": "sunlit coral shallows, floor ~19 m deep. Bubblefins (round yellow fish) live here, near the centre."},
+			"desc": "sunlit coral shallows, floor ~19 m deep. Exactly 2 Bubblefins (round yellow fish) live here, near the centre - once you have caught 2 Bubblefins, nothing more is needed here."},
 		{"id": "Z2", "name": "Kelp Forest", "E": -320, "N": 170, "parkDepth": 3, "r": 100,
-			"desc": "huge dense kelp forest, floor ~36 m, kelp tops 6.5-9.5 m deep. The sub CANNOT go between kelp stalks - park above the canopy (depth ~3 m) at the centre and send the diver down. Kelp Peepers (green fish) and sea lettuce (salad: a bright green leafy ball on the floor) live near the centre."},
+			"desc": "huge dense kelp forest, floor ~36 m, kelp tops 6.5-9.5 m deep. The sub CANNOT go between kelp stalks - park above the canopy (depth ~3 m) at the centre and send the diver down. Exactly 2 Kelp Peepers (green fish) and 3 sea lettuces (salad: a bright green leafy ball on the floor) live near the centre."},
 		{"id": "Z3", "name": "Grassy Plateaus", "E": 0, "N": 0, "parkDepth": 30, "r": 160,
 			"desc": "open red-grass plateau, floor ~55 m, rock arches. Nothing needed here; it is the fast road across the map."},
 		{"id": "Z4", "name": "Ship Wreck", "E": wreck.x, "N": wreck.y, "parkDepth": 30, "r": 80,
 			"desc": "a huge crashed ship on the plateau (~55 m). A landmark; nothing needed here."},
 		{"id": "Z5", "name": "Mushroom Forest", "E": 230, "N": 260, "parkDepth": 85, "r": 110,
-			"desc": "dark basin, floor ~100 m, giant glowing purple mushrooms (caps are obstacles). Glow Lanternfish (dark fish with a cyan glowing lure) drift near the centre at ~90-95 m."},
+			"desc": "dark basin, floor ~100 m, giant glowing purple mushrooms (caps are obstacles). Exactly 2 Glow Lanternfish (dark fish with a cyan glowing lure) drift near the centre at ~90-95 m."},
 		{"id": "Z6", "name": "Deep Canyon", "E": roundf(canyon_x(0)), "N": 0, "parkDepth": 150, "r": 60,
 			"desc": "long winding canyon along the east side, floor ~182 m, very dark. A mineral ledge sits on its west wall near E=%d N=%d at ~110 m depth." % [roundi(ledge.x), roundi(ledge.y)]},
 		{"id": "Z7", "name": "Crystal Crevice", "E": roundf(crevice.x), "N": crevice.y, "parkDepth": 165, "r": 10,
