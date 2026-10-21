@@ -5,7 +5,7 @@ const RULES = (spec) => `WORLD
 - Ocean area 1000 m x 1000 m, depth 0-190 m. Coordinates: E (east, -500..500), N (north, -500..500), depth in metres (positive = down). Compass: 0=N, 90=E, 180=S, 270=W.
 - SUB "Minnow": ${spec.sub.speed} m/s forward, ${spec.sub.vspeed} m/s vertical, radius ${spec.sub.r} m, commands up to ${spec.sub.max_dur} s. CANNOT grab, CANNOT fit between kelp stalks or into the Crystal Crevice.
 - DIVER: ${spec.diver.speed} m/s forward, ${spec.diver.vspeed} m/s vertical, commands up to ${spec.diver.max_dur} s, 90 s of air (refills inside the sub or at the surface). The diver's BAG holds everything: a grabbed item counts for the mission immediately and is never lost. Air at 0 = BLACKOUT: the diver is hauled back into the sub (costs time, keeps the bag).
-- The diver's net grabs the nearest item within 3 m and puts it straight into the bag. There is NO need to bring items back to the sub: return only for air or to travel far by sub (enter within 5 m). While the diver is out, the SUB FOLLOWS the diver automatically (stays within ~6 m, a few metres above), so the way back for air is short. With do:"grab" the grab fires automatically the MOMENT something comes within 3 m during the move (the move then stops).
+- The diver's net grabs the nearest item within 3 m and puts it straight into the bag. There is NO need to bring items back to the sub: return only for air or to travel far by sub (enter within 8 m). While the diver is out, the SUB FOLLOWS the diver automatically (stays within ~6 m, a few metres above), so the way back for air is short. With do:"grab" the grab fires automatically the MOMENT something comes within 3 m during the move (the move then stops).
 - Target fish keep swimming (~0.8 m/s) in wandering loops ~5 m across around their home spot, also changing depth. They move while you think: re-look before the final approach and lead the target.
 
 PERCEPTION (important)
@@ -44,7 +44,7 @@ Execution: 1) turn in place by turn_deg (-180..180, + = right); 2) for duration_
 - When there is a TARGET LOCK and you want that target: do:"grab", throttle 1, duration ~ distance/2 + 1 s. The autopilot homes in (heading + depth) and grabs on contact. Only skip it if air is too low or the target is not needed.
 - When the REACH SENSOR says something is within reach, use do:"grab".
 - If the target is almost straight above/below (horizontal < 3 m), use throttle 0 and only vertical.
-- exit: only from the sub. enter: diver within 5 m of the sub (beacon distance).
+- exit: only from the sub. enter: diver within 8 m of the sub (beacon distance).
 - AIR SAFETY: if air_s < (beacon distance / 2) + 12, go back to the sub and enter, no matter what.
 - SONAR gives distances to obstacles by relative bearing; steer toward clear bearings.
 - Set "replan": true only if the subgoal is finished, impossible, or makes no sense.`;
@@ -60,7 +60,7 @@ function header(s) {
   ];
   if (s.active === 'diver') {
     const b = s.sub_beacon;
-    lines.push(`AIR: ${s.air_s} s left | SUB BEACON: ${b.dist} m (horiz ${b.horiz}), rel ${sgn(b.rel)}°, dy ${sgn(b.dy)} | swim-back ~${Math.ceil(b.dist / 2)} s | enter possible: ${b.dist <= 5 ? 'YES' : 'no'}`);
+    lines.push(`AIR: ${s.air_s} s left | SUB BEACON: ${b.dist} m (horiz ${b.horiz}), rel ${sgn(b.rel)}°, dy ${sgn(b.dy)} | swim-back ~${Math.ceil(b.dist / 2)} s | enter possible: ${b.dist <= 8 ? 'YES' : 'no'}`);
     lines.push(`REACH SENSOR: ${s.reach.length ? 'GRABBABLE NOW: ' + s.reach.join(', ') : 'nothing within 3 m'}`);
   } else lines.push('DIVER: inside the sub');
   lines.push(`COLLECTED (diver's bag): fish ${inv.stored.fish}/3, salad ${inv.stored.salad}/1, mineral ${inv.stored.mineral}/1 | still missing: ${Object.entries(inv.missing).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing'}`);
@@ -89,11 +89,11 @@ export function s1Prompt(s, plan, target, lookText, lastResult, lock = null) {
     if (plan.body !== s.active) {
       lines.push(plan.body === 'diver'
         ? 'BODY SWITCH NEEDED: SYSTEM 2 wants the DIVER. Once the sub is within ~8 m of the target, stop and use do:"exit".'
-        : 'BODY SWITCH NEEDED: SYSTEM 2 wants the SUB. Swim back (follow the SUB BEACON) and use do:"enter" within 5 m.');
+        : 'BODY SWITCH NEEDED: SYSTEM 2 wants the SUB. Swim back (follow the SUB BEACON) and use do:"enter" within 8 m.');
     }
   }
   if (lock) lines.push(`TARGET LOCK (tracking sonar, EXACT, updated every step): ${lock.kind} (${lock.sighting}) ${lock.dist} m (horiz ${lock.horiz}), rel ${sgn(lock.rel)}°, dy ${sgn(lock.dy)}. HOMING AVAILABLE: send do:"grab" with throttle 1 and duration_s ~${Math.min(4, Math.ceil(lock.dist / 2) + 1)} - the diver's autopilot steers heading AND depth toward the locked target for you and grabs on contact (turn_deg/vertical are ignored while homing).`);
-  lines.push(`ACTIONS AVAILABLE NOW: ${s.active === 'sub' ? 'exit | none' : `${s.reach.length ? 'grab' : 'grab (nothing in reach yet)'} | ${s.sub_beacon.dist <= 5 ? 'enter' : 'enter (sub too far)'}`}`);
+  lines.push(`ACTIONS AVAILABLE NOW: ${s.active === 'sub' ? 'exit | none' : `${s.reach.length ? 'grab' : 'grab (nothing in reach yet)'} | ${s.sub_beacon.dist <= 8 ? 'enter' : 'enter (sub too far)'}`}`);
   lines.push(`LAST STEP: ${fmtResult(lastResult)}`);
   lines.push(`LATEST CAMERA LOOK: ${lookText}`);
   lines.push(`SONAR (range ${s.spec.sonar} m): ${fmtSonar(s)}`);

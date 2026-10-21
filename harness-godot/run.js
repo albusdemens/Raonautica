@@ -140,7 +140,7 @@ function targetOf(sg, s) {
     if (!z) return null;
     q = { E: z.E, N: z.N, depth: Number.isFinite(sg.depth) ? sg.depth : z.parkDepth }; reach = s.active === 'sub' ? 12 : 6; label = `${z.id} ${z.name}`;
   } else if (sg.type === 'sub') {
-    q = s.sub; reach = 5; label = 'the sub';
+    q = s.sub; reach = 8; label = 'the sub';
   } else if (sg.type === 'waypoint' && Number.isFinite(sg.E) && Number.isFinite(sg.N)) {
     q = { E: sg.E, N: sg.N, depth: Number.isFinite(sg.depth) ? sg.depth : s.pose.depth }; label = `waypoint (${Math.round(sg.E)}, ${Math.round(sg.N)}, ${Math.round(q.depth)} m)`;
   } else return null;
