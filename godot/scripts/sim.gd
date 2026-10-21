@@ -12,7 +12,6 @@ const O2_MAX := 90.0
 const GRAB_R := 3.0      # hand net
 const LOCK_R := 15.0     # short-range tracking sonar (camera estimates are often ~10 m off)
 const ENTER_R := 5.0
-const CARRY_MAX := 3
 const NEEDS := {"fish": 3, "salad": 1, "mineral": 1}
 const DT := 0.05
 const CELL := 10.0
@@ -237,17 +236,10 @@ func perform(what: String) -> Dictionary:
 			if active != "diver": return {"ok": false, "reason": "diver is already inside"}
 			var d := dist3(diver.pos, sub.pos)
 			if d > ENTER_R: return {"ok": false, "reason": "sub is %.1f m away (need <= %.0f m)" % [d, ENTER_R]}
-			var kinds := []
-			for id in carry:
-				_item(id).state = "stored"
-				stored.append(id)
-				kinds.append(_item(id).kind)
-			carry.clear()
 			active = "sub"; o2 = O2_MAX
-			return {"ok": true, "info": "diver boarded the sub; stored %s; air refilled" % (", ".join(kinds) if kinds.size() else "nothing")}
+			return {"ok": true, "info": "diver boarded the sub; air refilled"}
 		"grab":
 			if active != "diver": return {"ok": false, "reason": "the sub has no arm - only the diver can grab"}
-			if carry.size() >= CARRY_MAX: return {"ok": false, "reason": "hands full - return to the sub to store items"}
 			var best := {}; var bd := INF
 			for it in world.items:
 				if it.state != "world": continue
@@ -256,9 +248,10 @@ func perform(what: String) -> Dictionary:
 					bd = d2
 					best = it
 			if not best.is_empty() and bd <= GRAB_R:
-				best.state = "carried"
-				carry.append(best.id)
-				return {"ok": true, "kind": best.kind, "info": "grabbed a %s (%s)" % [best.kind, best.name]}
+				# the diver's bag holds everything: it counts right away, no trip back to the sub needed
+				best.state = "stored"
+				stored.append(best.id)
+				return {"ok": true, "kind": best.kind, "info": "grabbed a %s (%s) - stored in the diver's bag" % [best.kind, best.name]}
 			return {"ok": false, "reason": "nothing grabbable within %.1f m" % GRAB_R}
 	return {"ok": false, "reason": "unknown action " + what}
 

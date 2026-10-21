@@ -5,7 +5,7 @@
 Carried over from the three.js runs:
 - SYSTEM 1: when the subgoal is for the DIVER and the sub is within ~8 m of the target, use `"do":"exit"` right away.
 - SYSTEM 2: collect only what is still missing (one salad is enough; check "still missing").
-- SYSTEM 2: batch nearby needed items in one dive when air allows.
+- SYSTEM 2: chain grabs in one dive when air allows (the bag holds everything, items count immediately).
 - SYSTEM 2: when a zone has nothing left that you need, go to the next zone. Don't re-search it. The Kelp Forest gives a fish AND the salad in one visit.
 - SYSTEM 2: for the mineral ledge or the crevice, use a `waypoint` with the coordinates from the zone description and bring the SUB there first.
 - SYSTEM 1: if the target is almost straight above or below, use throttle 0 and only vertical.

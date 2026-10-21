@@ -159,6 +159,10 @@ func _setup_hud() -> void:
 	hud.vlm = mk.call(Vector2(10, 150), Vector2(360, 0))
 	hud.s2 = mk.call(Vector2(10, 560), Vector2(600, 0))
 	hud.s1 = mk.call(Vector2(670, 590), Vector2(600, 0))
+	hud.bag = BagBar.new()
+	hud.bag.position = Vector2(470, 10)
+	hud.bag.size = Vector2(340, 84)
+	layer.add_child(hud.bag)
 	hud.map = TextureRect.new()
 	hud.map.position = Vector2(1060, 10)
 	hud.map.custom_minimum_size = Vector2(210, 210)
@@ -193,6 +197,11 @@ func _update_hud(d: Dictionary) -> void:
 	hud.vlm.text = "[b][color=#c9a8ff]CODEX VISION[/color][/b]\n" + str(hud_data.get("vlm", "(no look yet)"))
 	hud.s2.text = "[b][color=#ffcf6b]SYSTEM 2 · plan[/color][/b]\n" + str(hud_data.get("s2", "no plan yet"))
 	hud.s1.text = "[b][color=#7ff0ff]SYSTEM 1 · motor[/color][/b]\n" + str(hud_data.get("s1", "idle"))
+	var bag_items := []
+	for id in sim.stored:
+		var it: Dictionary = sim._item(id)
+		bag_items.append({"kind": it.kind, "name": it.name})
+	hud.bag.set_items(bag_items)
 	var img: Image = hud.map_base.duplicate()
 	var to_px := func(E: float, N: float) -> Vector2i:
 		return Vector2i(clampi(int((E + World.HALF) / (2.0 * World.HALF) * 140.0), 0, 139), clampi(int((World.HALF - N) / (2.0 * World.HALF) * 140.0), 0, 139))

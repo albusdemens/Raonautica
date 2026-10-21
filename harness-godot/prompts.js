@@ -4,8 +4,8 @@
 const RULES = (spec) => `WORLD
 - Ocean area 1000 m x 1000 m, depth 0-190 m. Coordinates: E (east, -500..500), N (north, -500..500), depth in metres (positive = down). Compass: 0=N, 90=E, 180=S, 270=W.
 - SUB "Minnow": ${spec.sub.speed} m/s forward, ${spec.sub.vspeed} m/s vertical, radius ${spec.sub.r} m, commands up to ${spec.sub.max_dur} s. CANNOT grab, CANNOT fit between kelp stalks or into the Crystal Crevice.
-- DIVER: ${spec.diver.speed} m/s forward, ${spec.diver.vspeed} m/s vertical, commands up to ${spec.diver.max_dur} s, carries max 3 items, 90 s of air (refills inside the sub or at the surface). Air at 0 = BLACKOUT: carried items are lost and the diver is hauled back into the sub.
-- Items count only when the diver ENTERS the sub (within 5 m) carrying them. The diver's net grabs the nearest item within 3 m. With do:"grab" the grab fires automatically the MOMENT something comes within 3 m during the move (the move then stops).
+- DIVER: ${spec.diver.speed} m/s forward, ${spec.diver.vspeed} m/s vertical, commands up to ${spec.diver.max_dur} s, 90 s of air (refills inside the sub or at the surface). The diver's BAG holds everything: a grabbed item counts for the mission immediately and is never lost. Air at 0 = BLACKOUT: the diver is hauled back into the sub (costs time, keeps the bag).
+- The diver's net grabs the nearest item within 3 m and puts it straight into the bag. There is NO need to bring items back to the sub: return only for air or to travel far by sub (enter within 5 m). With do:"grab" the grab fires automatically the MOMENT something comes within 3 m during the move (the move then stops).
 - Target fish keep swimming (~0.8 m/s) in wandering loops ~5 m across around their home spot, also changing depth. They move while you think: re-look before the final approach and lead the target.
 
 PERCEPTION (important)
@@ -23,7 +23,7 @@ ${RULES(spec)}
 GOOD PRACTICE
 - Move the SUB (fast) to the zone where a needed item lives, look around, park close to a sighting, then send the diver (slow) for the last few metres.
 - Diver trips must be short (< 25 m from the sub). Budget air: swim-back time = distance / 2 m/s, keep a 30% margin.
-- Batch nearby needed items in one dive (max 3). Collect only what is still missing.
+- Chain grabs: after one grab, go straight for the next needed item if air allows. Return to the sub only for air or to cross the map. Collect only what is still missing.
 
 Reply with ONLY a JSON object:
 {"assessment":"1-2 sentences","plan":"remaining sequence, short","subgoal":{"type":"zone|sighting|sub|waypoint","id":"Z2 / V3 / null","E":null,"N":null,"depth":null},"body":"sub|diver","guidance":"concrete instruction for SYSTEM 1, max 30 words"}
@@ -61,10 +61,9 @@ function header(s) {
   if (s.active === 'diver') {
     const b = s.sub_beacon;
     lines.push(`AIR: ${s.air_s} s left | SUB BEACON: ${b.dist} m (horiz ${b.horiz}), rel ${sgn(b.rel)}°, dy ${sgn(b.dy)} | swim-back ~${Math.ceil(b.dist / 2)} s | enter possible: ${b.dist <= 5 ? 'YES' : 'no'}`);
-    lines.push(`CARRYING: ${s.carry_kinds.length ? s.carry_kinds.join(', ') : 'nothing'} (${s.carry_kinds.length}/3)`);
     lines.push(`REACH SENSOR: ${s.reach.length ? 'GRABBABLE NOW: ' + s.reach.join(', ') : 'nothing within 3 m'}`);
   } else lines.push('DIVER: inside the sub');
-  lines.push(`STORED ABOARD: fish ${inv.stored.fish}/3, salad ${inv.stored.salad}/1, mineral ${inv.stored.mineral}/1 | still missing: ${Object.entries(inv.missing).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing'}`);
+  lines.push(`COLLECTED (diver's bag): fish ${inv.stored.fish}/3, salad ${inv.stored.salad}/1, mineral ${inv.stored.mineral}/1 | still missing: ${Object.entries(inv.missing).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(', ') || 'nothing'}`);
   return lines;
 }
 
