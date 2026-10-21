@@ -90,7 +90,7 @@ static func make_diver() -> Node3D:
 # VLM cameras: rendered into small SubViewports only when the harness asks to "look"
 static func make_vlm_rig(parent: Node, size := Vector2i(640, 360)) -> Dictionary:
 	var rig := {}
-	for name in ["front", "left", "right", "down"]:
+	for name in ["front", "left", "right", "back", "down"]:
 		var vp := SubViewport.new()
 		vp.name = "VLM_" + name
 		vp.size = size

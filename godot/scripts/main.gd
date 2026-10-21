@@ -310,7 +310,7 @@ func _place_vlm_cameras() -> void:
 	var eye := World.xz(b.pos.x, b.pos.y, b.pos.z) + f * (2.6 if is_sub else 0.9) + Vector3(0, 0.3 if is_sub else 0.1, 0)
 	var front: Camera3D = vlm.front.cam
 	front.global_position = eye
-	front.look_at(eye + f * 10.0 + Vector3(0, -1.2, 0))
+	front.look_at(eye + f * 10.0)   # level: fish swim in mid-water, often above
 	var down: Camera3D = vlm.down.cam
 	down.global_position = eye + Vector3(0, -0.3, 0)
 	down.look_at(eye + f * 4.0 + Vector3(0, -9.0, 0))
@@ -320,7 +320,11 @@ func _place_vlm_cameras() -> void:
 		var c: Camera3D = vlm[side[0]].cam
 		var e: Vector3 = World.xz(b.pos.x, b.pos.y, b.pos.z) + r * side[1] * (1.8 if is_sub else 0.5) + Vector3(0, 0.2, 0)
 		c.global_position = e
-		c.look_at(e + r * side[1] * 10.0 + Vector3(0, -1.2, 0))
+		c.look_at(e + r * side[1] * 10.0)
+	var back: Camera3D = vlm.back.cam
+	var be: Vector3 = World.xz(b.pos.x, b.pos.y, b.pos.z) - f * (2.6 if is_sub else 0.6) + Vector3(0, 0.4, 0)
+	back.global_position = be
+	back.look_at(be - f * 10.0)
 
 # ---------------------------------------------------------------- bridge
 

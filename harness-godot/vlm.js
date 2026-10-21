@@ -8,8 +8,8 @@ import path from 'node:path';
 
 export const TARGET_KINDS = ['bubblefin', 'kelp_peeper', 'lanternfish', 'sea_lettuce', 'salt_crystal'];
 export const KIND_TO_ITEM = { bubblefin: 'fish', kelp_peeper: 'fish', lanternfish: 'fish', sea_lettuce: 'salad', salt_crystal: 'mineral' };
-export const CAM_OFFSET = { front: 0, left: -90, right: 90, down: 0 };
-const CAM_FOV = { front: 62, left: 62, right: 62, down: 70 };
+export const CAM_OFFSET = { front: 0, left: -90, right: 90, back: 180, down: 0 };
+const CAM_FOV = { front: 62, left: 62, right: 62, back: 62, down: 70 };
 const REAL_LEN = { bubblefin: 2.1, kelp_peeper: 2.1, lanternfish: 2.1, sea_lettuce: 1.5, salt_crystal: 1.2 };   // metres
 const IMG_W = 640, IMG_H = 360, CROP = 200, ZOOM = 2;
 
@@ -29,14 +29,14 @@ const DETECT_SCHEMA = {
       required: ['kind', 'camera', 'x_frac', 'y_frac', 'bearing_deg', 'distance_m', 'vertical', 'confidence', 'note'],
       properties: {
         kind: { type: 'string', enum: TARGET_KINDS },
-        camera: { type: 'string', enum: ['front', 'left', 'right', 'down'] },
+        camera: { type: 'string', enum: ['front', 'left', 'right', 'back', 'down'] },
         x_frac: { type: 'number' }, y_frac: { type: 'number' },
         bearing_deg: { type: 'number' }, distance_m: { type: 'number' },
         vertical: { type: 'string', enum: ['above', 'level', 'below'] },
         confidence: { type: 'number' }, note: { type: 'string' } } } },
     obstacles: { type: 'array', items: { type: 'object', additionalProperties: false,
       required: ['what', 'camera', 'bearing_deg', 'distance_m'],
-      properties: { what: { type: 'string' }, camera: { type: 'string', enum: ['front', 'left', 'right', 'down'] }, bearing_deg: { type: 'number' }, distance_m: { type: 'number' } } } },
+      properties: { what: { type: 'string' }, camera: { type: 'string', enum: ['front', 'left', 'right', 'back', 'down'] }, bearing_deg: { type: 'number' }, distance_m: { type: 'number' } } } },
     sub: { type: 'object', additionalProperties: false, required: ['visible', 'bearing_deg', 'distance_m'],
       properties: { visible: { type: 'boolean' }, bearing_deg: { type: 'number' }, distance_m: { type: 'number' } } },
     diver: { type: 'object', additionalProperties: false, required: ['visible', 'bearing_deg', 'distance_m'],
@@ -55,10 +55,11 @@ const CONFIRM_SCHEMA = {
 
 const DETECT_PROMPT = (who, where) => `You are the eyes of an underwater ${who === 'sub' ? 'submarine' : 'diver'} robot.
 CURRENT LOCATION (from the map): ${where}
-Image 1 = FRONT camera (horizontal FOV 62 deg, centre = straight ahead, tilted slightly down).
-Image 2 = LEFT camera (FOV 62 deg, centre = 90 deg to the robot's left).
-Image 3 = RIGHT camera (FOV 62 deg, centre = 90 deg to the robot's right).
-Image 4 = DOWN camera (FOV 70 deg, looking forward-down at ~60 deg; its centre is ~5 m ahead and well below).
+Image 1 = FRONT camera (horizontal FOV 62 deg, centre = straight ahead, level).
+Image 2 = LEFT camera (FOV 62 deg, centre = 90 deg to the robot's left, level).
+Image 3 = RIGHT camera (FOV 62 deg, centre = 90 deg to the robot's right, level).
+Image 4 = BACK camera (FOV 62 deg, centre = straight behind the robot, level; the robot's own body may be at the edge).
+Image 5 = DOWN camera (FOV 70 deg, looking forward-down at ~60 deg; its centre is ~5 m ahead and well below).
 Report what you SEE. List every CANDIDATE that might be a target; a second, zoomed-in check will confirm or reject each one, so it is fine to include plausible candidates with a moderate confidence.
 Corals, mushrooms, sea grass, kelp leaves and schools of many small fish are NOT targets. Targets that do not live in the current location are unlikely.
 
@@ -103,7 +104,7 @@ export async function look(images, who, outDir, name, where = 'unknown') {
   const dSchema = path.join(outDir, 'detect_schema.json'), cSchema = path.join(outDir, 'confirm_schema.json');
   if (!fs.existsSync(dSchema)) fs.writeFileSync(dSchema, JSON.stringify(DETECT_SCHEMA));
   if (!fs.existsSync(cSchema)) fs.writeFileSync(cSchema, JSON.stringify(CONFIRM_SCHEMA));
-  const order = ['front', 'left', 'right', 'down'];
+  const order = ['front', 'left', 'right', 'back', 'down'];
   const det = await runCodex(order.map((k) => images[k]), DETECT_PROMPT(who, where), dSchema, path.join(outDir, `${name}_detect.json`), outDir);
 
   // stage 2: zoom-confirm every candidate in one call
