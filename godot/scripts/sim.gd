@@ -165,6 +165,10 @@ func tick_action(dt: float) -> Dictionary:
 		var cr := collide(want, sp.r)
 		want = cr[0]
 		if cr[1] != "": hit = cr[1]
+		# sub autopilot: bumping into the top of a kelp stalk -> climb over the canopy instead of stalling
+		if active == "sub" and cr[1] == "kelp stalk":
+			b.pos.y = minf(-sp.min_depth, b.pos.y + sp.vspeed * dt)
+			want.y = maxf(want.y, b.pos.y)
 		want.y = minf(-sp.min_depth, maxf(want.y, world.floor_at(want.x, want.z) + sp.r))
 		var moved := Vector2(want.x - b.pos.x, want.z - b.pos.z).length()
 		if hit != "" and stepm > 0.0 and moved < stepm * 0.5:
