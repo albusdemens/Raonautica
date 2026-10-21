@@ -10,7 +10,7 @@ const BODIES := {
 }
 const O2_MAX := 90.0
 const GRAB_R := 3.0      # hand net
-const LOCK_R := 8.0      # short-range tracking sonar
+const LOCK_R := 15.0     # short-range tracking sonar (camera estimates are often ~10 m off)
 const ENTER_R := 5.0
 const CARRY_MAX := 3
 const NEEDS := {"fish": 3, "salad": 1, "mineral": 1}
