@@ -8,19 +8,25 @@ and Raon decides every move.
 
 ## How it works
 
-```
- Godot game state
-   │  (camera frames: front / left / right / back / down)
-   ▼
- Codex (VLM) ── "Bubblefin, bearing +20°, ~12 m" ──┐
-                                                   ▼
- body sensors (pose, air, sonar, sub beacon, ──► Raon SYSTEM 2 (planner): next subgoal + which body
- target lock, bag)                                 │
-                                                   ▼
-                                                 Raon SYSTEM 1 (motor): turn / throttle / vertical /
-                                                   │                    exit · enter · grab
-                                                   ▼
-                                                 Godot executes the command → next step
+```mermaid
+flowchart LR
+    G["🎮 <b>Godot</b><br/>game state + physics"]
+    subgraph OBS [" what the robot perceives "]
+        V["👁️ <b>Codex</b> (VLM)<br/>describes camera frames<br/>→ sightings V1, V2…"]
+        B["📡 <b>Body sensors</b><br/>pose · air · sonar · bag<br/>sub beacon · target lock"]
+    end
+    subgraph RAON [" Raon decides "]
+        S2["🧠 <b>SYSTEM 2</b><br/>planner: next subgoal<br/>sub or diver"]
+        S1["⚡ <b>SYSTEM 1</b><br/>motor: turn · throttle<br/>vertical · exit · enter · grab"]
+        S2 -- subgoal + guidance --> S1
+    end
+    L[("📝 lessons<br/>from run reviews")]
+
+    G -- camera frames --> V
+    G -- exact readings --> B
+    OBS -- text --> RAON
+    S1 -- motor command --> G
+    L -.-> RAON
 ```
 
 1. **Game state:** Godot simulates the world and serves a TCP bridge. It renders the active body's cameras on request.
