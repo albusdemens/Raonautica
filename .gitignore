@@ -9,4 +9,3 @@ godot/.godot/
 runs/**
 !runs/**/
 !runs/**/review.md
-docs/*.mp4

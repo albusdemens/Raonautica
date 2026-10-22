@@ -6,6 +6,8 @@ at the game and [Raon 1 mini](https://huggingface.co/KRAFTON/Raon-1-mini-preview
 
 ![demo](docs/demo.gif)
 
+▶️ [Watch the full-resolution video](docs/demo.mp4) (1280 px, 32 s)
+
 ## How it works
 
 ```mermaid
