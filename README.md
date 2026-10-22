@@ -4,9 +4,7 @@ A submarine and a diver explore a 1 km Subnautica-style ocean, built in [Godot 4
 3 fish, 1 sea lettuce and 1 salt crystal. **No human or scripted AI plays.** [Codex](https://github.com/openai/codex) looks
 at the game and [Raon 1 mini](https://huggingface.co/KRAFTON/Raon-1-mini-preview) (`raon-1-mini-preview`, 30B, text-only) decides every move.
 
-![demo](docs/demo.gif)
-
-▶️ [Watch the full-resolution video](docs/demo.mp4) (1280 px, 32 s)
+https://github.com/user-attachments/assets/435d8ac6-b316-4a52-ad3c-75d3a1b5b6cd
 
 ## How it works
 
