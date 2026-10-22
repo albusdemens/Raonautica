@@ -2,8 +2,7 @@
 
 A submarine and a diver explore a 1 km Subnautica-style ocean, built in [Godot 4](https://godotengine.org), to gather lunch:
 3 fish, 1 sea lettuce and 1 salt crystal. **No human or scripted AI plays.** [Codex](https://github.com/openai/codex) looks
-at the game and [Raon](https://raon.krafton.ai), [KRAFTON](https://huggingface.co/KRAFTON)'s model family, decides every move. The LLM used here is
-**Raon-1 mini preview** (`raon-1-mini-preview`, 30B, text-only) via an OpenAI-compatible chat API.
+at the game and [Raon 1 mini](https://huggingface.co/KRAFTON/Raon-1-mini-preview) (`raon-1-mini-preview`, 30B, text-only) decides every move.
 
 ![demo](docs/demo.gif)
 
