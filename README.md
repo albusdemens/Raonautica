@@ -1,81 +1,58 @@
 # Raon Dive
 
-A Subnautica-style 100 × 100 × 100 m ocean in three.js. A submarine and a diver gather lunch:
-3 fish, 1 sea lettuce and 1 salt crystal. **Raon drives everything**:
+A submarine and a diver explore a 1 km Subnautica-style ocean, built in Godot 4, to gather lunch:
+3 fish, 1 sea lettuce and 1 salt crystal. **No human or scripted AI plays.** Codex looks at the game
+and Raon decides every move.
 
-- **SYSTEM 2 (planner)** is called on events: mission start, subgoal reached, item grabbed, diver
-  exits or enters, low air, blackout, stuck, new items spotted, and every 10 steps. It picks
-  the next subgoal (a zone, item, the sub, or a waypoint), which body should act, and gives
-  guidance.
-- **SYSTEM 1 (motor control)** is called every step. It outputs one command for the active body:
-  turn, throttle, vertical, duration, and `exit | enter | grab`.
+![demo](docs/demo.gif)
 
-Raon is text-only, so the simulator describes the world in words. Each prompt includes pose and
-depth, air, a sonar fan, items in sight, the subgoal's relative bearing and distance, the last
-step's outcome and the storage checklist.
+## How it works
 
-## Why the diver has to go out
-- The sub (radius 2.3 m) can't fit between kelp stalks or into the Crystal Crevice, and it can't grab anything.
-- The diver is slow (2 m/s), has 90 s of air and carries at most 3 items. Items count only once the diver re-enters the sub.
-- Running out of air causes a blackout: the diver loses whatever it carries.
+```
+ Godot game state
+   │  (camera frames: front / left / right / back / down)
+   ▼
+ Codex (VLM) ── "Bubblefin, bearing +20°, ~12 m" ──┐
+                                                   ▼
+ body sensors (pose, air, sonar, sub beacon, ──► Raon SYSTEM 2 (planner): next subgoal + which body
+ target lock, bag)                                 │
+                                                   ▼
+                                                 Raon SYSTEM 1 (motor): turn / throttle / vertical /
+                                                   │                    exit · enter · grab
+                                                   ▼
+                                                 Godot executes the command → next step
+```
+
+1. **Game state:** Godot simulates the world and serves a TCP bridge. It renders the active body's cameras on request.
+2. **VLM (Codex):** describes the frames as strict JSON. It detects targets, then confirms them on zoomed crops. Sightings (V1, V2…) are remembered with estimated positions.
+3. **SYSTEM 2 (Raon):** the slow planner. It runs on events (start, grab, low air, stuck, new sightings) and picks the next subgoal and body.
+4. **SYSTEM 1 (Raon):** the fast controller. Each step it outputs one motor command for the sub or the diver.
+
+The sub is fast but can't grab anything, and it doesn't fit into the kelp forest or the crevice. The diver
+is slow and has 90 s of air. Grabbed items go straight into the diver's bag.
+
+Runs are reviewed afterwards from their screenshots and logs. The lessons from each review go into
+`feedback/lessons-godot.md`, which is hot-reloaded into both Raon prompts.
 
 ## Run it
+
+Requirements: Godot 4.x, Node 20+, the [Codex CLI](https://github.com/openai/codex), ffmpeg, and `RAON_API_KEY=...` in `.env`.
+
 ```bash
 npm install
-npm run serve                       # then open http://localhost:8765 and watch: it starts by itself
-node harness.js --steps 150         # headless run with screenshots -> runs/<id>/
-node harness.js --preview           # visual check only, no Raon calls
+node harness-godot/run.js --steps 250 --speed 4            # opens the Godot window; just watch
+node harness-godot/run.js --record                         # also saves gameplay frames to runs/<id>/frames
+node harness-godot/preview.js                              # visual check, no Raon/Codex
+node harness-godot/visual-qa.js                            # Codex critiques short clips of key scenes
 ```
-The live page has view (chase / free orbit / overview) and speed controls. The Raon key stays in
-`.env` on the server and never reaches the browser.
 
-## Review loop
-Each run writes `runs/<id>/`:
-- `shots/*.png`: full-page screenshots, including HUD, minimap, depth profile and Raon's plan and command.
-- `log.jsonl`: every prompt, reply, reasoning trace, latency and step result.
-- `summary.json`: outcome, steps, inventory and API stats.
+Each run writes `runs/<id>/`: `log.jsonl` (every prompt, reply and result), `shots/`, `vlm/` (what Codex saw) and `summary.json`.
 
-Claude reviews the screenshots and log, writes `runs/<id>/review.md`, and distils the actionable
-points into `feedback/lessons.md`. Both Raon systems get that file in their system prompt on the
-next run.
+## Layout
 
-## Files
-| file | what |
+| path | what |
 |---|---|
-| `server.js` | static server + Raon proxy + run logging |
-| `harness.js` | Playwright runner (headless Chrome), screenshots |
-| `web/world.js` | terrain, caustics, kelp, coral, abyss, fish, items, zones |
-| `web/actors.js` | submarine and diver models |
-| `web/sim.js` | physics, oxygen, grab/exit/enter, perception |
-| `web/prompts.js` | SYSTEM 1 / SYSTEM 2 prompts and observation text |
-| `web/agent.js` | the decision loop and replanning triggers |
-| `web/hud.js` | HUD, minimap, depth profile, item labels |
-
----
-
-# Godot port: Codex sees, Raon decides
-
-`godot/` holds the same 1 km ocean rebuilt in Godot 4.7, using the Forward+ renderer with volumetric fog
-(god rays), SSAO, glow, soft shadows, MultiMesh decor with visibility ranges and custom underwater shaders.
-In this version **Raon gets no ground-truth item list.** Each look, Godot renders the active body's
-front and down cameras, and **Codex** (the VLM) describes them. Raon decides from that description plus
-exact body sensors (pose, depth, air, sonar, sub beacon, inventory, the diver's reach sensor). Targets
-seen on camera become *sightings* (V1, V2…) with estimated positions.
-
-```
-Godot (window, physics, TCP bridge :9079)
-   │  look → front.png + down.png        act ← motor command
-   ▼                                      ▲
-Codex exec (VLM, strict JSON) ──text──► Raon SYSTEM 2 (plans) / SYSTEM 1 (motor)
-                                          ▲
-                         body sensors ────┘
-```
-
-```bash
-node harness-godot/run.js --steps 150 --speed 3        # opens the Godot window; watch it live
-node harness-godot/run.js --vlm-every 3                # Codex looks at each plan + every 3 steps
-node harness-godot/preview.js                          # visual check, no Raon/Codex
-```
-Each run writes `runs/<id>/` containing `log.jsonl`, `shots/` (main window plus HUD), `vlm/` (exactly what
-Codex saw, plus its JSON) and `summary.json`. Godot-specific lessons go in `feedback/lessons-godot.md`.
-The godot-mcp server is registered in `.mcp.json` (its tools load when Claude Code restarts here).
+| `godot/` | world, sub and diver, simulation, HUD, TCP bridge |
+| `harness-godot/` | run loop, Codex VLM, Raon client, prompts |
+| `feedback/` | lessons distilled from run reviews |
+| `web/`, `server.js`, `harness.js` | the earlier three.js version (Raon sees a text description, no VLM): `npm run serve` |

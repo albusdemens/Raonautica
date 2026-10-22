@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "A robot driven by Raon (System 1 + System 2) in a Sable-inspired three.js desert",
+  "description": "An underwater sub + diver driven by Raon (System 1 + System 2), seeing through Codex as a VLM, in Godot",
   "scripts": {
     "serve": "node server.js",
     "run": "node harness.js"

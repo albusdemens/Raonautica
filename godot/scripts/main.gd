@@ -30,6 +30,9 @@ var focus := {}   # {item} or {E, N, depth}, plus dist / yaw for the 'focus' cam
 var cam_pos := Vector3.ZERO
 var cam_look := Vector3.ZERO
 var snow: GPUParticles3D
+var rec_dir := ""      # --record=/abs/dir: gameplay frames (JPG) for a trailer video
+var rec_n := 0
+var rec_clock := 0.0
 
 func _ready() -> void:
 	var t0 := Time.get_ticks_msec()
@@ -55,6 +58,9 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--port="):
 			port = int(a.substr(7))
+		elif a.begins_with("--record="):
+			rec_dir = a.substr(9)
+			DirAccess.make_dir_recursive_absolute(rec_dir)
 	var err := server.listen(port, "127.0.0.1")
 	print("[raobot] world built in %d ms; bridge %s on port %d" % [Time.get_ticks_msec() - t0, "listening" if err == OK else "FAILED", port])
 	_update_actors(0.0)
@@ -235,6 +241,17 @@ func _process(delta: float) -> void:
 	if not sim.is_busy():
 		sim.world_t += delta   # fish keep swimming while the robot is thinking
 	world.update_visuals(sim.world_t)
+	if rec_dir != "":
+		_record_tick(delta)
+
+# 10 fps while a command executes; one frame every 4 s while Raon/Codex think (pauses get compressed)
+func _record_tick(delta: float) -> void:
+	rec_clock += delta
+	if rec_clock < (0.1 if sim.is_busy() else 4.0):
+		return
+	rec_clock = 0.0
+	get_viewport().get_texture().get_image().save_jpg("%s/f_%06d.jpg" % [rec_dir, rec_n], 0.9)
+	rec_n += 1
 
 func _update_actors(time: float) -> void:
 	sub_node.position = World.xz(sim.sub.pos.x, sim.sub.pos.y, sim.sub.pos.z)

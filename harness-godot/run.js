@@ -34,7 +34,8 @@ const say = (...a) => console.log(`[${new Date().toISOString().slice(11, 19)}]`,
 let godot = null;
 if (!flag('attach')) {
   const glog = fs.createWriteStream(path.join(dir, 'godot.log'));
-  godot = spawn('godot', ['--path', path.join(ROOT, 'godot'), '--', `--port=${PORT}`], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const rec = flag('record') ? [`--record=${path.join(dir, 'frames')}`] : [];   // gameplay frames for a video
+  godot = spawn('godot', ['--path', path.join(ROOT, 'godot'), '--', `--port=${PORT}`, ...rec], { stdio: ['ignore', 'pipe', 'pipe'] });
   godot.stdout.pipe(glog); godot.stderr.pipe(glog);
   godot.on('exit', (c) => say(`godot exited (${c})`));
 }
