@@ -1,8 +1,9 @@
 # Raon Dive
 
-A submarine and a diver explore a 1 km Subnautica-style ocean, built in Godot 4, to gather lunch:
-3 fish, 1 sea lettuce and 1 salt crystal. **No human or scripted AI plays.** Codex looks at the game
-and Raon decides every move.
+A submarine and a diver explore a 1 km Subnautica-style ocean, built in [Godot 4](https://godotengine.org), to gather lunch:
+3 fish, 1 sea lettuce and 1 salt crystal. **No human or scripted AI plays.** [Codex](https://github.com/openai/codex) looks
+at the game and [Raon](https://raon.krafton.ai), [KRAFTON](https://huggingface.co/KRAFTON)'s model family, decides every move. The LLM used here is
+`raon-1-mini-preview`, a text-only, OpenAI-compatible chat API.
 
 ![demo](docs/demo.gif)
 
@@ -42,7 +43,7 @@ Runs are reviewed afterwards from their screenshots and logs. The lessons from e
 
 ## Run it
 
-Requirements: Godot 4.x, Node 20+, the [Codex CLI](https://github.com/openai/codex), ffmpeg, and `RAON_API_KEY=...` in `.env`.
+Requirements: [Godot 4.x](https://godotengine.org/download), [Node 20+](https://nodejs.org), the [Codex CLI](https://github.com/openai/codex), [ffmpeg](https://ffmpeg.org), and a Raon API key in `.env` (`RAON_API_KEY=...`, optional `RAON_BASE_URL`).
 
 ```bash
 npm install
